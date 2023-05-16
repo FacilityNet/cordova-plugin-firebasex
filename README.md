@@ -209,6 +209,7 @@ Note that these must be set at plugin installation time. If you wish to change p
 - `FIREBASE_PERFORMANCE_COLLECTION_ENABLED` - whether to automatically enable Firebase Performance data collection on app startup
 - `FIREBASE_CRASHLYTICS_COLLECTION_ENABLED` - whether to automatically enable Firebase Crashlytics data collection on app startup
 See [Disable data collection on startup](#disable-data-collection-on-startup) for more info.
+- `FIREBASE_MESSAGING_AUTO_INIT_ENABLED` - whether to prevent FCM auto initialization
 
 ### Android only
 The following plugin variables are used to specify the Firebase SDK versions as Gradle dependencies on Android:
@@ -575,18 +576,21 @@ To do this, set the following plugin variables to `false` at plugin install time
 * `FIREBASE_ANALYTICS_COLLECTION_ENABLED`
 * `FIREBASE_PERFORMANCE_COLLECTION_ENABLED`
 * `FIREBASE_CRASHLYTICS_COLLECTION_ENABLED`
+* `FIREBASE_MESSAGING_AUTO_INIT_ENABLED`
 
 
     cordova plugin add cordova-plugin-firebasex \
         --variable FIREBASE_ANALYTICS_COLLECTION_ENABLED=false \
         --variable FIREBASE_PERFORMANCE_COLLECTION_ENABLED=false \
-        --variable FIREBASE_CRASHLYTICS_COLLECTION_ENABLED=false
+        --variable FIREBASE_CRASHLYTICS_COLLECTION_ENABLED=false \
+        --variable FIREBASE_MESSAGING_AUTO_INIT_ENABLED=false
 
 This will disable data collection (on both Android & iOS) until you call [setAnalyticsCollectionEnabled](#setanalyticscollectionenabled), [setPerformanceCollectionEnabled](#setperformancecollectionenabled) and [setCrashlyticsCollectionEnabled](#setcrashlyticscollectionenabled):
 
        FirebasePlugin.setAnalyticsCollectionEnabled(true);
        FirebasePlugin.setPerformanceCollectionEnabled(true);
        FirebasePlugin.setCrashlyticsCollectionEnabled(true);
+       FirebaseMessaging.getInstance().setAutoInitEnabled(true);
 
 Notes:
 - Calling `setXCollectionEnabled()` will have no effect if the corresponding `FIREBASE_X_COLLECTION_ENABLED` variable is set to `true`.

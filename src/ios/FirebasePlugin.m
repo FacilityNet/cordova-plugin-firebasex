@@ -30,6 +30,7 @@ static NSString*const FIREBASE_CRASHLYTICS_COLLECTION_ENABLED = @"FIREBASE_CRASH
 static NSString*const FirebaseCrashlyticsCollectionEnabled = @"FirebaseCrashlyticsCollectionEnabled"; //plist
 static NSString*const FIREBASE_ANALYTICS_COLLECTION_ENABLED = @"FIREBASE_ANALYTICS_COLLECTION_ENABLED";
 static NSString*const FIREBASE_PERFORMANCE_COLLECTION_ENABLED = @"FIREBASE_PERFORMANCE_COLLECTION_ENABLED";
+static NSString*const FIREBASE_MESSAGING_AUTO_INIT_ENABLED = @"FIREBASE_MESSAGING_AUTO_INIT_ENABLED";
 
 static FirebasePlugin* firebasePlugin;
 static BOOL registeredForRemoteNotifications = NO;
@@ -39,6 +40,7 @@ static NSString* currentNonce; // used for Apple Sign In
 static FIRFirestore* firestore;
 static NSUserDefaults* preferences;
 static NSDictionary* googlePlist;
+static NSDictionary* appPlist;
 static NSMutableDictionary* firestoreListeners;
 static NSString* currentInstallationId;
 static NSMutableDictionary* traces;
@@ -64,6 +66,7 @@ static NSMutableDictionary* traces;
     @try {
         preferences = [NSUserDefaults standardUserDefaults];
         googlePlist = [NSMutableDictionary dictionaryWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"GoogleService-Info" ofType:@"plist"]];
+        appPlist = [[NSBundle mainBundle] infoDictionary];
 
         if([self getGooglePlistFlagWithDefaultValue:FirebaseCrashlyticsCollectionEnabled defaultValue:YES]){
             [self setPreferenceFlag:FIREBASE_CRASHLYTICS_COLLECTION_ENABLED flag:YES];
@@ -75,6 +78,10 @@ static NSMutableDictionary* traces;
 
         if([self getGooglePlistFlagWithDefaultValue:FIREBASE_PERFORMANCE_COLLECTION_ENABLED defaultValue:YES]){
             [self setPreferenceFlag:FIREBASE_PERFORMANCE_COLLECTION_ENABLED flag:YES];
+        }
+
+        if([self getAppPlistFlagWithDefaultValue:FIREBASE_MESSAGING_AUTO_INIT_ENABLED defaultValue:YES]){
+            [self setPreferenceFlag:FIREBASE_MESSAGING_AUTO_INIT_ENABLED flag:YES];
         }
 
         // Set actionable categories if pn-actions.json exist in bundle
@@ -135,7 +142,7 @@ static NSMutableDictionary* traces;
 
         // Initialize categories
         [[UNUserNotificationCenter currentNotificationCenter] setNotificationCategories:categories];
-        
+
         // Initialize installation ID change listner
         __weak __auto_type weakSelf = self;
         self.installationIDObserver = [[NSNotificationCenter defaultCenter]
@@ -165,7 +172,7 @@ static NSMutableDictionary* traces;
         [self runOnMainThread:^{
             @try {
                 [FIRMessaging messaging].autoInitEnabled = enabled;
-
+                [self setPreferenceFlag:FIREBASE_MESSAGING_AUTO_INIT_ENABLED flag:enabled];
                 CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
                 [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
             }@catch (NSException *exception) {
@@ -178,21 +185,15 @@ static NSMutableDictionary* traces;
 }
 
 - (void)isAutoInitEnabled:(CDVInvokedUrlCommand *)command {
-    @try {
-
-        [self runOnMainThread:^{
-            @try {
-                 bool enabled =[FIRMessaging messaging].isAutoInitEnabled;
-
-                 CDVPluginResult *commandResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:enabled];
-                 [self.commandDelegate sendPluginResult:commandResult callbackId:command.callbackId];
-            }@catch (NSException *exception) {
-                [self handlePluginExceptionWithContext:exception :command];
-            }
-        }];
-    }@catch (NSException *exception) {
-        [self handlePluginExceptionWithContext:exception :command];
-    }
+    [self.commandDelegate runInBackground:^{
+        @try {
+            bool enabled =[self getPreferenceFlag:FIREBASE_MESSAGING_AUTO_INIT_ENABLED];
+            CDVPluginResult *commandResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:enabled];
+            [self.commandDelegate sendPluginResult:commandResult callbackId:command.callbackId];
+        }@catch (NSException *exception) {
+            [self handlePluginExceptionWithContext:exception :command];
+        }
+    }];
 }
 
 /*
@@ -306,7 +307,7 @@ static NSMutableDictionary* traces;
                             authOptions = authOptions|UNAuthorizationOptionProvidesAppNotificationSettings;
                         }
                     }
-                
+
                     [[UNUserNotificationCenter currentNotificationCenter]
                      requestAuthorizationWithOptions:authOptions
                      completionHandler:^(BOOL granted, NSError * _Nullable error) {
@@ -1468,7 +1469,7 @@ static NSMutableDictionary* traces;
     [self.commandDelegate runInBackground:^{
         @try {
             NSString* traceName = [command.arguments objectAtIndex:0];
-            
+
             @synchronized (traces) {
                 FIRTrace* trace = [traces objectForKey:traceName];
 
@@ -1477,7 +1478,7 @@ static NSMutableDictionary* traces;
                     [traces setObject:trace forKey:traceName ];
                 }
             }
-            
+
             CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
         }@catch (NSException *exception) {
@@ -1981,7 +1982,7 @@ static NSMutableDictionary* traces;
 
 - (void) getInstallationToken:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
-        @try {            
+        @try {
             [[FIRInstallations installations] authTokenForcingRefresh:true
                                                            completion:^(FIRInstallationsAuthTokenResult *result, NSError *error) {
               if (error != nil) {
@@ -2271,6 +2272,13 @@ static NSMutableDictionary* traces;
         return defaultValue;
     }
     return [[googlePlist objectForKey:name] isEqualToString:@"true"];
+}
+
+- (BOOL) getAppPlistFlagWithDefaultValue:(NSString*) name defaultValue:(BOOL)defaultValue {
+    if([appPlist objectForKey:name] == nil){
+        return defaultValue;
+    }
+    return [[appPlist objectForKey:name] isEqualToString:@"true"];
 }
 
 

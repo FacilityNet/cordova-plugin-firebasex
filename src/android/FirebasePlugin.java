@@ -134,6 +134,7 @@ public class FirebasePlugin extends CordovaPlugin {
     private static final String CRASHLYTICS_COLLECTION_ENABLED = "firebase_crashlytics_collection_enabled";
     private static final String ANALYTICS_COLLECTION_ENABLED = "firebase_analytics_collection_enabled";
     private static final String PERFORMANCE_COLLECTION_ENABLED = "firebase_performance_collection_enabled";
+    private static final String MESSAGING_AUTO_INIT_ENABLED = "firebase_messaging_auto_init_enabled";
 
     private static boolean inBackground = true;
     private static ArrayList<Bundle> notificationStack = null;
@@ -176,13 +177,17 @@ public class FirebasePlugin extends CordovaPlugin {
                         setPreference(PERFORMANCE_COLLECTION_ENABLED, true);
                     }
 
+                    if(getMetaDataFromManifest(MESSAGING_AUTO_INIT_ENABLED)){
+                        setPreference(MESSAGING_AUTO_INIT_ENABLED, true);
+                    }
+
                     FirebaseApp.initializeApp(applicationContext);
                     mFirebaseAnalytics = FirebaseAnalytics.getInstance(applicationContext);
 
                     authStateListener = new AuthStateListener();
                     FirebaseAuth.getInstance().addAuthStateListener(authStateListener);
 
-                    firestore = FirebaseFirestore.getInstance();                  
+                    firestore = FirebaseFirestore.getInstance();
                     functions = FirebaseFunctions.getInstance();
 
                     gson = new GsonBuilder()
@@ -672,7 +677,7 @@ public class FirebasePlugin extends CordovaPlugin {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 try {
-                    boolean isEnabled = FirebaseMessaging.getInstance().isAutoInitEnabled();
+                    boolean isEnabled = getPreference(MESSAGING_AUTO_INIT_ENABLED);
                     callbackContext.success(conformBooleanForPluginResult(isEnabled));
                 } catch (Exception e) {
                     logExceptionToCrashlytics(e);
@@ -688,6 +693,7 @@ public class FirebasePlugin extends CordovaPlugin {
             public void run() {
                 try {
                     FirebaseMessaging.getInstance().setAutoInitEnabled(enabled);
+                    setPreference(MESSAGING_AUTO_INIT_ENABLED, enabled);
                     callbackContext.success();
                 } catch (Exception e) {
                     logExceptionToCrashlytics(e);

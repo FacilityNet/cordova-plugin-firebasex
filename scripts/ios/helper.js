@@ -210,6 +210,10 @@ module.exports = {
             googlePlist["FirebaseCrashlyticsCollectionEnabled"] = (pluginVariables['FIREBASE_CRASHLYTICS_COLLECTION_ENABLED'] !== "false" ? "true" : "false") ;
             googlePlistModified = true;
         }
+        if(typeof pluginVariables['FIREBASE_MESSAGING_AUTO_INIT_ENABLED'] !== 'undefined'){
+            appPlist["FIREBASE_MESSAGING_AUTO_INIT_ENABLED"] = (pluginVariables['FIREBASE_MESSAGING_AUTO_INIT_ENABLED'] !== "false" ? "true" : "false") ;
+            appPlistModified = true;
+        }
         if(typeof pluginVariables['IOS_SHOULD_ESTABLISH_DIRECT_CHANNEL'] !== 'undefined'){
             appPlist["shouldEstablishDirectChannel"] = (pluginVariables['IOS_SHOULD_ESTABLISH_DIRECT_CHANNEL'] === "true") ;
             appPlistModified = true;
